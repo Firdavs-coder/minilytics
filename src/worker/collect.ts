@@ -198,12 +198,14 @@ export async function ingest(
 }
 
 /**
- * Dodo sends buyers back to your return URL with ?payment_id=pay_... . Seeing that on a pageview tells us
- * exactly which visitor made the payment, even when the checkout had no metadata.
+ * Dodo sends buyers back to your return URL with ?payment_id=pay_... and Stripe with ?session_id=cs_...
+ * (when the success URL has {CHECKOUT_SESSION_ID}). Seeing that on a pageview tells us exactly which
+ * visitor made the payment, even when the checkout had no metadata.
  */
 function claimPayment(db: D1Database, siteId: string, vid: string, url: URL, now: number): D1PreparedStatement[] {
-  const paymentId = url.searchParams.get('payment_id') ?? url.searchParams.get('subscription_id');
-  if (!paymentId || !/^(pay|sub)_[\w-]{4,64}$/.test(paymentId)) return [];
+  const q = url.searchParams;
+  const paymentId = q.get('payment_id') ?? q.get('subscription_id') ?? q.get('session_id');
+  if (!paymentId || !/^(pay|sub)_[\w-]{4,64}$|^cs_(test|live)_\w{4,200}$/.test(paymentId)) return [];
   return [
     db
       .prepare('INSERT OR IGNORE INTO payment_claims (site_id, payment_id, visitor_id, ts) VALUES (?, ?, ?, ?)')
@@ -213,16 +215,16 @@ function claimPayment(db: D1Database, siteId: string, vid: string, url: URL, now
       .prepare(
         `UPDATE payments SET visitor_id = ?, matched_by = 'return_page',
            session_id = (${creditedSessionSql()})
-         WHERE site_id = ? AND (id = ? OR subscription_id = ?) AND visitor_id IS NULL`,
+         WHERE site_id = ? AND ? IN (id, subscription_id, checkout_id) AND visitor_id IS NULL`,
       )
-      .bind(vid, siteId, vid, now + 60_000, siteId, paymentId, paymentId),
+      .bind(vid, siteId, vid, now + 60_000, siteId, paymentId),
     db
       .prepare(
-        `UPDATE visitors SET email = COALESCE(email, (SELECT email FROM payments WHERE site_id = ? AND (id = ? OR subscription_id = ?) LIMIT 1)),
-           name = COALESCE(name, (SELECT name FROM payments WHERE site_id = ? AND (id = ? OR subscription_id = ?) LIMIT 1))
+        `UPDATE visitors SET email = COALESCE(email, (SELECT email FROM payments WHERE site_id = ? AND ? IN (id, subscription_id, checkout_id) LIMIT 1)),
+           name = COALESCE(name, (SELECT name FROM payments WHERE site_id = ? AND ? IN (id, subscription_id, checkout_id) LIMIT 1))
          WHERE site_id = ? AND id = ?`,
       )
-      .bind(siteId, paymentId, paymentId, siteId, paymentId, paymentId, siteId, vid),
+      .bind(siteId, paymentId, siteId, paymentId, siteId, vid),
   ];
 }
 

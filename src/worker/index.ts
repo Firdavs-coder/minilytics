@@ -5,7 +5,7 @@ import { forgetSite, type AppEnv, type Site } from './env';
 import { clearSession, currentUser, googleCallback, googleStart, isHosted, requireUser, setSession, siteAccessSql } from './auth';
 import { billingWebhook, checkout, planInfo } from './billing';
 import { passwordsMatch, randomId } from './lib/crypto';
-import { handleDodoWebhook, handleGoalApi, handlePaymentApi, rematchPayments } from './payments';
+import { handleDodoWebhook, handleGoalApi, handlePaymentApi, handleStripeWebhook, rematchPayments } from './payments';
 import { breakdown, customers, funnel, makeCtx, overview, realtime, visitorProfile, visitors, type FunnelStep } from './stats';
 
 const app = new Hono<AppEnv>();
@@ -17,6 +17,7 @@ const LOCKOUT_MS = 15 * 60_000;
 app.use('/api/event', cors({ origin: '*', allowMethods: ['POST', 'OPTIONS'], maxAge: 86400 }));
 app.post('/api/event', handleEvent);
 app.post('/api/webhooks/dodo/:siteId', handleDodoWebhook);
+app.post('/api/webhooks/stripe/:siteId', handleStripeWebhook);
 app.post('/api/v1/payments', handlePaymentApi);
 app.post('/api/v1/goals', handleGoalApi);
 
@@ -104,7 +105,8 @@ function validTimezone(tz: string) {
   }
 }
 
-const publicSite = (s: Site) => ({ ...s, dodo_webhook_secret: s.dodo_webhook_secret ? '••••••••' : null });
+const mask = (secret: string | null | undefined) => (secret ? '••••••••' : null);
+const publicSite = (s: Site) => ({ ...s, dodo_webhook_secret: mask(s.dodo_webhook_secret), stripe_webhook_secret: mask(s.stripe_webhook_secret) });
 
 app.get('/api/sites', async (c) => {
   const now = Date.now();
@@ -172,14 +174,26 @@ app.patch('/api/sites/:id', async (c) => {
   if (typeof b.dodo_webhook_secret === 'string' && !b.dodo_webhook_secret.includes('•')) {
     next.dodo_webhook_secret = b.dodo_webhook_secret.trim() || null;
   }
+  if (typeof b.stripe_webhook_secret === 'string' && !b.stripe_webhook_secret.includes('•')) {
+    next.stripe_webhook_secret = b.stripe_webhook_secret.trim() || null;
+  }
   if (typeof b.dodo_product_ids === 'string') {
     const ids = b.dodo_product_ids.split(/[\s,]+/).filter((x) => /^pdt_[\w-]+$/.test(x));
     next.dodo_product_ids = ids.join(',') || null;
   }
   await c.env.DB.prepare(
-    'UPDATE sites SET name = ?, domain = ?, timezone = ?, currency = ?, dodo_webhook_secret = ?, dodo_product_ids = ? WHERE id = ?',
+    'UPDATE sites SET name = ?, domain = ?, timezone = ?, currency = ?, dodo_webhook_secret = ?, dodo_product_ids = ?, stripe_webhook_secret = ? WHERE id = ?',
   )
-    .bind(next.name, next.domain, next.timezone, next.currency, next.dodo_webhook_secret, next.dodo_product_ids ?? null, site.id)
+    .bind(
+      next.name,
+      next.domain,
+      next.timezone,
+      next.currency,
+      next.dodo_webhook_secret,
+      next.dodo_product_ids ?? null,
+      next.stripe_webhook_secret ?? null,
+      site.id,
+    )
     .run();
   forgetSite(site.id);
   return c.json(publicSite(next));
