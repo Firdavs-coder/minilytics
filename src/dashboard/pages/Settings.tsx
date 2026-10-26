@@ -3,6 +3,7 @@ import { navigate } from '../App';
 import { Favicon } from '../components/Icons';
 import { buildAiPrompt } from '../lib/aiPrompt';
 import { api, type Site } from '../lib/api';
+import { fmtMoney } from '../lib/format';
 
 const DOCS = 'https://github.com/surendrapandar/minilytics#';
 
@@ -322,8 +323,61 @@ await dodo.checkoutSessions.create({
           </button>
         </div>
       </details>
+      <PendingDodoPayments site={site} />
       <ProviderFooter anchor="dodo-payments" />
     </>
+  );
+}
+
+const currencyDecimals = (c: string) => {
+  try {
+    return new Intl.NumberFormat('en', { style: 'currency', currency: c }).resolvedOptions().maximumFractionDigits ?? 2;
+  } catch {
+    return 2;
+  }
+};
+
+interface PendingProduct {
+  product_id: string | null;
+  count: number;
+  amount: number;
+  currency: string | null;
+}
+
+/** Payments from a product Minilytics couldn't link to any site yet. Rare: most are placed automatically. */
+function PendingDodoPayments({ site }: { site: Site }) {
+  const [rows, setRows] = useState<PendingProduct[]>([]);
+  const load = () => api<PendingProduct[]>(`/api/sites/${site.id}/pending-payments`).then(setRows);
+  useEffect(() => {
+    load();
+  }, [site.id]);
+  if (!rows.length) return null;
+  return (
+    <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
+      <p className="font-medium text-amber-900">Payments waiting for a site</p>
+      <p className="mt-1 text-amber-800">
+        These came from a product none of your sites links to yet, so they aren't counted anywhere. They're placed automatically once a buyer
+        comes from {site.name}. Know they're {site.name}'s? Count them now.
+      </p>
+      <ul className="mt-3 space-y-2">
+        {rows.map((r) => (
+          <li key={r.product_id ?? ''} className="flex items-center justify-between gap-3">
+            <span>
+              <code>{r.product_id ?? 'unknown product'}</code> · {r.count} payment{r.count === 1 ? '' : 's'},{' '}
+              {fmtMoney(r.amount, r.currency ?? site.currency, currencyDecimals(r.currency ?? site.currency))}
+            </span>
+            {r.product_id && (
+              <button
+                className="btn shrink-0"
+                onClick={() => api(`/api/sites/${site.id}/pending-payments`, { method: 'POST', json: { product_id: r.product_id } }).then(load)}
+              >
+                Count for {site.name}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

@@ -24,6 +24,7 @@ interface PaymentInput {
   name?: string | null;
   subscriptionId?: string | null;
   checkoutId?: string | null;
+  productId?: string | null;
   renewal?: boolean;
 }
 
@@ -154,8 +155,8 @@ export async function recordPayment(db: D1Database, site: Site, p: PaymentInput)
   const stmts = [
     db
       .prepare(
-        `INSERT INTO payments (id, site_id, provider, ts, amount, kind, currency, visitor_id, session_id, customer_id, email, name, renewal, matched_by, subscription_id, checkout_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO payments (id, site_id, provider, ts, amount, kind, currency, visitor_id, session_id, customer_id, email, name, renewal, matched_by, subscription_id, checkout_id, product_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET
            visitor_id = CASE WHEN ${better} THEN COALESCE(excluded.visitor_id, payments.visitor_id) ELSE payments.visitor_id END,
            session_id = CASE WHEN ${better} THEN COALESCE(excluded.session_id, payments.session_id) ELSE payments.session_id END,
@@ -180,6 +181,7 @@ export async function recordPayment(db: D1Database, site: Site, p: PaymentInput)
         matchedBy,
         p.subscriptionId ?? null,
         p.checkoutId ?? null,
+        p.productId ?? null,
       ),
   ];
   // A payment tells us who an anonymous visitor really is.
@@ -240,6 +242,72 @@ function pickMeta(meta: Record<string, unknown> | undefined, keys: string[]): st
   return null;
 }
 
+const DODO_PRODUCT = /dodopayments\.com\/buy\/(pdt_[\w-]+)/;
+
+/** The Dodo product of a checkout link (https://checkout.dodopayments.com/buy/pdt_...), if it is one. */
+export function dodoProductOfLink(url: string): string | null {
+  return DODO_PRODUCT.exec(url)?.[1] ?? null;
+}
+
+/**
+ * Does this Dodo payment belong to this site? true = yes, false = another site's, null = can't tell yet.
+ * Dodo sends every payment in the account to every webhook, so this is decided per product. `learn` is
+ * set when the payment itself proves the product is this site's.
+ */
+async function ownsDodoPayment(db: D1Database, site: Site, products: string[], visitorId: string | null) {
+  const manual = (site.dodo_product_ids ?? '').split(',').filter(Boolean);
+  if (manual.length) return { owned: products.some((id) => manual.includes(id)), learn: false };
+
+  // The buyer's visitor id is first-party to one site's domain.
+  if (visitorId) {
+    const r = await db.prepare('SELECT site_id FROM visitors WHERE id = ? LIMIT 10').bind(visitorId).all<{ site_id: string }>();
+    const sites = r.results.map((x) => x.site_id);
+    if (sites.includes(site.id)) return { owned: true, learn: true };
+    if (sites.length) return { owned: false, learn: false };
+  }
+  if (products.length) {
+    const r = await db
+      .prepare(`SELECT site_id FROM dodo_products WHERE product_id IN (${products.map(() => '?').join(',')})`)
+      .bind(...products)
+      .all<{ site_id: string }>();
+    const sites = r.results.map((x) => x.site_id);
+    if (sites.includes(site.id)) return { owned: true, learn: false };
+    if (sites.length) return { owned: false, learn: false };
+  }
+  // A new product: it's this site's if no other site of the same owner takes Dodo payments.
+  const other = await db
+    .prepare('SELECT 1 FROM sites WHERE id != ? AND dodo_webhook_secret IS NOT NULL AND owner_id IS ? LIMIT 1')
+    .bind(site.id, site.owner_id ?? null)
+    .first();
+  return { owned: other ? null : true, learn: !other };
+}
+
+/**
+ * Remember that these products (or this one payment) belong to the site: count its waiting payments,
+ * and drop the copies other sites were holding.
+ */
+export async function learnDodoProducts(db: D1Database, site: Site, products: string[], paymentId: string | null = null) {
+  if (paymentId) {
+    const row = await db
+      .prepare('SELECT product_id FROM pending_payments WHERE site_id = ? AND payment_id = ?')
+      .bind(site.id, paymentId)
+      .first<{ product_id: string | null }>();
+    if (!row && !products.length) return;
+    if (row?.product_id) products = [...products, row.product_id];
+  }
+  if (!products.length && !paymentId) return;
+  const ph = products.map(() => '?').join(',') || "''";
+  const pending = await db
+    .prepare(`SELECT payload FROM pending_payments WHERE site_id = ? AND (product_id IN (${ph}) OR payment_id = ?)`)
+    .bind(site.id, ...products, paymentId ?? '')
+    .all<{ payload: string }>();
+  await db.batch([
+    ...products.map((id) => db.prepare('INSERT OR IGNORE INTO dodo_products (product_id, site_id) VALUES (?, ?)').bind(id, site.id)),
+    db.prepare(`DELETE FROM pending_payments WHERE product_id IN (${ph}) OR payment_id = ?`).bind(...products, paymentId ?? ''),
+  ]);
+  for (const row of pending.results) await recordPayment(db, site, JSON.parse(row.payload) as PaymentInput);
+}
+
 /** Dodo Payments webhook: POST /api/webhooks/dodo/:siteId */
 export async function handleDodoWebhook(c: Context<AppEnv>) {
   const site = await getSite(c.env.DB, c.req.param('siteId')!);
@@ -264,12 +332,7 @@ export async function handleDodoWebhook(c: Context<AppEnv>) {
   const meta = { ...(customer.metadata as object), ...(data.metadata as object) } as Record<string, unknown>;
   const ts = Date.parse(data.created_at ?? event.timestamp ?? '') || Date.now();
 
-  // One Dodo account may sell several products; count only the ones that belong to this site.
-  const allowed = (site.dodo_product_ids ?? '').split(',').map((x) => x.trim()).filter(Boolean);
-  if (allowed.length && event.type === 'payment.succeeded') {
-    const products = Array.isArray(data.product_cart) ? data.product_cart.map((p: any) => p?.product_id) : [];
-    if (!products.some((id: string) => allowed.includes(id))) return c.json({ ok: true, ignored: 'other product' });
-  }
+  const products: string[] = Array.isArray(data.product_cart) ? data.product_cart.map((p: any) => p?.product_id).filter(Boolean) : [];
 
   if (event.type === 'payment.succeeded') {
     let amount = Number(data.total_amount) || 0;
@@ -278,7 +341,7 @@ export async function handleDodoWebhook(c: Context<AppEnv>) {
       amount = Number(data.settlement_amount) || amount;
       currency = data.settlement_currency;
     }
-    await recordPayment(c.env.DB, site, {
+    const payment: PaymentInput = {
       id: String(data.payment_id),
       provider: 'dodo',
       ts,
@@ -291,13 +354,27 @@ export async function handleDodoWebhook(c: Context<AppEnv>) {
       email: str(customer.email)?.toLowerCase() ?? null,
       name: str(customer.name),
       subscriptionId: str(data.subscription_id) ?? (Array.isArray(data.subscription_ids) ? str(data.subscription_ids[0]) : null),
-    });
+      productId: products[0] ?? null,
+    };
+    const { owned, learn } = await ownsDodoPayment(c.env.DB, site, products, payment.visitorId ?? null);
+    if (owned === false) return c.json({ ok: true, ignored: 'another site\'s product' });
+    if (owned === null) {
+      await c.env.DB.prepare('INSERT OR IGNORE INTO pending_payments (site_id, payment_id, product_id, ts, payload) VALUES (?, ?, ?, ?, ?)')
+        .bind(site.id, payment.id, payment.productId, ts, JSON.stringify(payment))
+        .run();
+      return c.json({ ok: true, pending: 'unknown product' });
+    }
+    await recordPayment(c.env.DB, site, payment);
+    if (learn) await learnDodoProducts(c.env.DB, site, products);
   } else if (event.type === 'refund.succeeded') {
     const original = await c.env.DB.prepare('SELECT * FROM payments WHERE id = ? AND site_id = ?')
       .bind(String(data.payment_id), site.id)
       .first<{ visitor_id: string | null; session_id: string | null; currency: string; amount: number }>();
     // A refund of a payment this site never recorded (another product, or before tracking) isn't this site's.
-    if (!original) return c.json({ ok: true, ignored: 'unknown payment' });
+    if (!original) {
+      await c.env.DB.prepare('DELETE FROM pending_payments WHERE site_id = ? AND payment_id = ?').bind(site.id, String(data.payment_id)).run();
+      return c.json({ ok: true, ignored: 'unknown payment' });
+    }
     const amount = Number(data.amount) || original.amount || 0;
     await c.env.DB.prepare(
       `INSERT OR IGNORE INTO payments (id, site_id, provider, ts, amount, kind, currency, visitor_id, session_id, customer_id, email, name)

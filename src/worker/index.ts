@@ -5,7 +5,7 @@ import { forgetSite, type AppEnv, type Site } from './env';
 import { clearSession, currentUser, googleCallback, googleStart, isHosted, requireUser, setSession, siteAccessSql } from './auth';
 import { billingWebhook, checkout, planInfo } from './billing';
 import { passwordsMatch, randomId } from './lib/crypto';
-import { handleDodoWebhook, handleGoalApi, handlePaymentApi, handleStripeWebhook, rematchPayments } from './payments';
+import { handleDodoWebhook, handleGoalApi, handlePaymentApi, handleStripeWebhook, learnDodoProducts, rematchPayments } from './payments';
 import { breakdown, customers, funnel, makeCtx, overview, realtime, visitorProfile, visitors, type FunnelStep } from './stats';
 
 const app = new Hono<AppEnv>();
@@ -228,6 +228,22 @@ app.get('/api/sites/:id/breakdown', async (c) => {
   }
 });
 
+// Dodo payments that couldn't be placed on a site yet, grouped by product.
+app.get('/api/sites/:id/pending-payments', async (c) => {
+  const r = await c.env.DB.prepare(
+    `SELECT product_id, COUNT(*) AS count, SUM(json_extract(payload, '$.amount')) AS amount, MAX(json_extract(payload, '$.currency')) AS currency
+     FROM pending_payments WHERE site_id = ? GROUP BY product_id ORDER BY MAX(ts) DESC`,
+  )
+    .bind(c.get('site').id)
+    .all();
+  return c.json(r.results);
+});
+app.post('/api/sites/:id/pending-payments', async (c) => {
+  const b = await c.req.json<{ product_id?: string }>().catch(() => ({}) as { product_id?: string });
+  if (!b.product_id || !/^pdt_[\w-]+$/.test(b.product_id)) return c.json({ error: 'product_id is required' }, 400);
+  await learnDodoProducts(c.env.DB, c.get('site'), [b.product_id]);
+  return c.json({ ok: true });
+});
 app.post('/api/sites/:id/rematch', async (c) => c.json(await rematchPayments(c.env.DB, c.get('site'))));
 app.get('/api/sites/:id/realtime', async (c) => c.json(await realtime(c.env.DB, c.get('site'))));
 app.get('/api/sites/:id/customers', async (c) => c.json(await customers(makeCtx(c))));

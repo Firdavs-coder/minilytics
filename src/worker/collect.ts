@@ -3,7 +3,7 @@ import { classify } from '../shared/sources';
 import { siteOwnerActive } from './auth';
 import { getSite, type AppEnv, type Site } from './env';
 import { isBot, parseUA } from './lib/ua';
-import { creditedSessionSql } from './payments';
+import { creditedSessionSql, dodoProductOfLink, learnDodoProducts } from './payments';
 
 const TYPES = new Set(['pageview', 'goal', 'outbound', 'ping', 'identify']);
 const MAX_PING_MS = 10 * 60_000;
@@ -195,6 +195,11 @@ export async function ingest(
     );
   }
   await db.batch(stmts);
+
+  // A link to a Dodo checkout, or a buyer back on the return page, tells which site a product belongs to.
+  const product = t === 'outbound' ? dodoProductOfLink(String(body.n ?? '')) : null;
+  const paid = t === 'pageview' ? url.searchParams.get('payment_id') : null;
+  if (product || (paid && /^pay_[\w-]{4,64}$/.test(paid))) await learnDodoProducts(db, site, product ? [product] : [], paid);
 }
 
 /**
