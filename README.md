@@ -134,6 +134,9 @@ npx wrangler secret put PLAN_PRICE              # e.g. $29
 npx wrangler secret put PLAN_INTERVAL           # lifetime | month | year
 npx wrangler secret put PLAN_SPOTS              # e.g. 5 ("3 of 5 spots left"); optional
 npx wrangler secret put PLAN_NEXT_PRICE         # e.g. $49 ("…, then $49"); optional
+npx wrangler secret put PLAN_TIERS              # optional: "$29:5, $49:pdt_b:5, $100" steps the price up as spots sell
+                                                # (one Dodo product per price; no pdt_ = sold out or only announced).
+                                                # Replaces PRICE/SPOTS/NEXT_PRICE; sold-out prices show as "5 sold at $29"
 npx wrangler secret put SUPPORT_EMAIL           # shown on pricing, billing and legal pages
 npm run deploy
 ```

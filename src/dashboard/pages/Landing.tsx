@@ -84,13 +84,25 @@ export function Landing() {
   const per = lifetime ? 'lifetime' : `/${plan?.interval}`;
   const priceText = lifetime ? `${price} once` : `${price}/${plan?.interval}`;
   const next = plan?.nextPrice;
+  // Earlier prices that already sold out, for "5 sold at $29" proof next to the current price.
+  const soldOut = plan?.soldOut ?? [];
+  const soldCount = soldOut.reduce((n, t) => n + t.spots, 0);
+  const lastSold = soldOut[soldOut.length - 1];
   const cta = plan ? `Get started for ${priceLabel(plan)}` : 'Get started';
 
   return (
     <div className="min-h-screen overflow-x-hidden">
       {spots && spots.left > 0 && (
         <a href="#pricing" className="block bg-ink px-4 py-2 text-center text-sm text-white" data-ml-goal="pricing_cta" data-ml-goal-location="top-bar">
-          🎉 {lifetime ? 'Lifetime deal' : 'Founding offer'}: <b>{priceText}</b>, unlimited everything · <b>{spots.left}</b> of {spots.total} spots left
+          {lastSold ? (
+            <>
+              🔥 First {soldCount} sold out at <s>{lastSold.price}</s>. Now <b>{priceText}</b> · <b>{spots.left}</b> of {spots.total} spots left
+            </>
+          ) : (
+            <>
+              🎉 {lifetime ? 'Lifetime deal' : 'Founding offer'}: <b>{priceText}</b>, unlimited everything · <b>{spots.left}</b> of {spots.total} spots left
+            </>
+          )}
           {next ? `, then ${next}` : ''} →
         </a>
       )}
@@ -284,9 +296,15 @@ export function Landing() {
               </div>
             )}
             <div className="flex items-baseline gap-1">
+              {lastSold && <span className="mr-2 text-3xl font-medium text-stone-400 line-through">{lastSold.price}</span>}
               <span className="text-6xl font-semibold tracking-tight">{price}</span>
               <span className="text-lg text-stone-500">{per}</span>
             </div>
+            {soldOut.map((t) => (
+              <div key={t.price} className="mt-3 flex items-center gap-2 text-sm text-stone-600">
+                <Check /> <span><b className="text-ink">{t.spots} sold</b> at {t.price} · sold out</span>
+              </div>
+            ))}
             <ul className="mt-6 space-y-2.5">
               {[
                 'Unlimited websites',
@@ -356,6 +374,7 @@ export function Landing() {
           <GoogleButton light label={cta} className="mt-8" location="final-cta" />
           {spots && spots.left > 0 && (
             <p className="mt-4 text-sm text-stone-400">
+              {lastSold ? `${soldCount} sold at ${lastSold.price} · ` : ''}
               {spots.left} of {spots.total} spots left at {price} · 14-day money-back
             </p>
           )}

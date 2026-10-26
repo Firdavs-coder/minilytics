@@ -112,6 +112,8 @@ export interface PlanInfo {
   spots: number;
   spotsLeft: number | null;
   nextPrice: string | null;
+  /** Earlier prices whose spots are all sold, oldest first. */
+  soldOut?: { price: string; spots: number }[];
   checkout: boolean;
   supportEmail: string | null;
 }
