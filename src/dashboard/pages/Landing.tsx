@@ -4,6 +4,20 @@ import { api, type PlanInfo } from '../lib/api';
 
 export const GITHUB_URL = 'https://github.com/surendrapandar/minilytics';
 
+const SPONSOR_CHECKOUT_URL = 'https://checkout.dodopayments.com/buy/pdt_0NqWPM98xzStsrTUMLyxE?quantity=1';
+
+// Open-source sponsors, same order as the README. The first one is shown largest.
+const SPONSORS = [
+  {
+    name: 'SnitchFeed',
+    tagline: 'Agentic social listening for GTM: X, LinkedIn, Reddit & more',
+    url: 'https://snitchfeed.com/?utm_source=minilytics&utm_medium=sponsorship&utm_campaign=oss-sponsor&utm_content=website',
+    logo: '/sponsors/snitchfeed.png',
+  },
+  { name: 'DiskMate', tagline: 'Disk space analyzer & cleaner for Mac', url: 'https://diskmate.app/?ref=minilytics-website', logo: '/sponsors/diskmate.svg' },
+  { name: 'PasteBuddy', tagline: 'Clipboard history for Mac', url: 'https://pastebuddy.app/?ref=minilytics-website', logo: '/sponsors/pastebuddy.svg' },
+];
+
 export function usePlan() {
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   useEffect(() => {
@@ -365,6 +379,46 @@ export function Landing() {
           ))}
         </div>
       </Section>
+
+      {/* ---------- Sponsors. Links open in a new tab so visitors stay on this page. */}
+      <section className="mx-auto mt-28 max-w-4xl px-4">
+        <div className="text-center">
+          <div className="text-sm font-semibold uppercase tracking-wider text-revenue">Open source sponsors</div>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">The free, self-hosted version is backed by these makers</h2>
+          <p className="mx-auto mt-3 max-w-xl text-stone-600">
+            Their support keeps Minilytics MIT-licensed and free to self-host for everyone. Go check out what they’re building.
+          </p>
+        </div>
+        <div className="mt-10 grid gap-4 sm:grid-cols-3">
+          {SPONSORS.map((s, i) => (
+            <a
+              key={s.name}
+              href={s.url}
+              target="_blank"
+              rel="noopener sponsored"
+              data-ml-goal="sponsor_click"
+              data-ml-goal-sponsor={s.name}
+              className={`card flex items-center gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-lg ${i === 0 ? 'sm:col-span-3 sm:p-6' : ''}`}
+            >
+              <img src={s.logo} alt="" width={i === 0 ? 56 : 44} height={i === 0 ? 56 : 44} loading="lazy" className="shrink-0 rounded-xl" />
+              <div className="min-w-0">
+                <div className={`font-semibold ${i === 0 ? 'text-lg' : ''}`}>{s.name}</div>
+                <div className="text-sm text-stone-600">{s.tagline}</div>
+              </div>
+              {i === 0 && <span className="ml-auto hidden shrink-0 text-sm font-medium text-stone-500 sm:inline">Visit {s.name} ↗</span>}
+            </a>
+          ))}
+          <a
+            href={SPONSOR_CHECKOUT_URL}
+            target="_blank"
+            rel="noopener"
+            data-ml-goal="sponsor_cta"
+            className="flex items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 p-5 text-sm text-stone-500 transition hover:border-stone-300 hover:text-ink"
+          >
+            Your logo here · Become a sponsor →
+          </a>
+        </div>
+      </section>
 
       {/* ---------- Final CTA */}
       <section className="mx-auto mt-28 max-w-6xl px-4">

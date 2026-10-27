@@ -10,17 +10,22 @@ Cloudflare's free plan.
 
 <table>
   <tr>
-    <td align="center" width="33%">
+    <td align="center" width="25%">
+      <a href="https://snitchfeed.com/?utm_source=minilytics&utm_medium=sponsorship&utm_campaign=oss-sponsor&utm_content=github-readme"><img src="docs/sponsors/snitchfeed.png" width="64" height="64" alt="SnitchFeed"></a><br>
+      <a href="https://snitchfeed.com/?utm_source=minilytics&utm_medium=sponsorship&utm_campaign=oss-sponsor&utm_content=github-readme"><b>SnitchFeed</b></a><br>
+      <sub>Agentic social listening for GTM: X, LinkedIn, Reddit &amp; more</sub>
+    </td>
+    <td align="center" width="25%">
       <a href="https://diskmate.app/?ref=minilytics-github"><img src="docs/sponsors/diskmate.svg" width="64" height="64" alt="DiskMate"></a><br>
       <a href="https://diskmate.app/?ref=minilytics-github"><b>DiskMate</b></a><br>
       <sub>Disk space analyzer &amp; cleaner for Mac</sub>
     </td>
-    <td align="center" width="33%">
+    <td align="center" width="25%">
       <a href="https://pastebuddy.app/?ref=minilytics-github"><img src="docs/sponsors/pastebuddy.svg" width="64" height="64" alt="PasteBuddy"></a><br>
       <a href="https://pastebuddy.app/?ref=minilytics-github"><b>PasteBuddy</b></a><br>
       <sub>Clipboard history for Mac: never lose what you copy</sub>
     </td>
-    <td align="center" width="33%">
+    <td align="center" width="25%">
       <a href="https://checkout.dodopayments.com/buy/pdt_0NqWPM98xzStsrTUMLyxE?quantity=1"><b>Your logo here</b></a><br>
       <sub>Reach indie hackers and developers who self-host their analytics</sub><br><br>
       <a href="https://checkout.dodopayments.com/buy/pdt_0NqWPM98xzStsrTUMLyxE?quantity=1">Become a sponsor →</a>
