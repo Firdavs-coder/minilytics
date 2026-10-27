@@ -14,6 +14,18 @@ const SPONSORS = [
     url: 'https://snitchfeed.com/?utm_source=minilytics&utm_medium=sponsorship&utm_campaign=oss-sponsor&utm_content=website',
     logo: '/sponsors/snitchfeed.png',
   },
+  {
+    name: 'Open Source Alternatives',
+    tagline: 'Find Best Open Source Alternatives to Paid Software',
+    url: 'https://www.opensourcealternatives.to/?ref=minilytics-website',
+    logo: '/sponsors/opensourcealternatives.png',
+  },
+  {
+    name: 'Awesome Black Friday Deals',
+    tagline: 'Black Friday & Cyber Monday deals for devs & indie makers',
+    url: 'https://github.com/twf-nikhila/Awesome-Black-Friday-Cyber-Monday-deals',
+    logo: '/sponsors/black-friday-deals.png',
+  },
   { name: 'DiskMate', tagline: 'Disk space analyzer & cleaner for Mac', url: 'https://diskmate.app/?ref=minilytics-website', logo: '/sponsors/diskmate.svg' },
   { name: 'PasteBuddy', tagline: 'Clipboard history for Mac', url: 'https://pastebuddy.app/?ref=minilytics-website', logo: '/sponsors/pastebuddy.svg' },
 ];
@@ -414,7 +426,7 @@ export function Landing() {
             target="_blank"
             rel="noopener"
             data-ml-goal="sponsor_cta"
-            className="flex items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 p-5 text-sm text-stone-500 transition hover:border-stone-300 hover:text-ink"
+            className="flex items-center justify-center rounded-2xl border-2 border-dashed sm:col-span-2 border-stone-200 p-5 text-sm text-stone-500 transition hover:border-stone-300 hover:text-ink"
           >
             Your logo here · Become a sponsor →
           </a>
