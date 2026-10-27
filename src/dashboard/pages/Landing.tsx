@@ -127,6 +127,7 @@ export function Landing() {
           <a href="#how" className="hidden rounded-lg px-3 py-2 text-stone-600 hover:text-ink md:inline">How it works</a>
           <a href="#compare" className="hidden rounded-lg px-3 py-2 text-stone-600 hover:text-ink md:inline">Compare</a>
           <a href="#pricing" className="hidden rounded-lg px-3 py-2 text-stone-600 hover:text-ink sm:inline" data-ml-goal="pricing_cta" data-ml-goal-location="nav">Pricing</a>
+          <a href="#sponsors" className="hidden rounded-lg px-3 py-2 text-stone-600 hover:text-ink sm:inline">Sponsors</a>
           <a href={GITHUB_URL} className="hidden rounded-lg px-3 py-2 text-stone-600 hover:text-ink sm:inline">GitHub</a>
           <a href="/api/auth/google" className="btn" data-ml-goal="signup_click" data-ml-goal-location="nav">Sign in</a>
         </nav>
@@ -381,7 +382,7 @@ export function Landing() {
       </Section>
 
       {/* ---------- Sponsors. Links open in a new tab so visitors stay on this page. */}
-      <section className="mx-auto mt-28 max-w-4xl px-4">
+      <section id="sponsors" className="mx-auto mt-28 max-w-4xl scroll-mt-6 px-4">
         <div className="text-center">
           <div className="text-sm font-semibold uppercase tracking-wider text-revenue">Open source sponsors</div>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">The free, self-hosted version is backed by these makers</h2>
