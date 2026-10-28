@@ -94,8 +94,18 @@ function Section({ id, eyebrow, title, sub, children, className = '' }: { id?: s
   );
 }
 
-function Shot({ src, alt, className = '' }: { src: string; alt: string; className?: string }) {
-  return <img src={src} alt={alt} loading="lazy" className={`w-full rounded-2xl border border-stone-200 bg-white shadow-xl ${className}`} />;
+function Shot({ src, alt, size, eager = false, className = '' }: { src: string; alt: string; size: [number, number]; eager?: boolean; className?: string }) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      width={size[0]}
+      height={size[1]}
+      loading={eager ? 'eager' : 'lazy'}
+      fetchPriority={eager ? 'high' : 'auto'}
+      className={`w-full rounded-2xl border border-stone-200 bg-white shadow-xl ${className}`}
+    />
+  );
 }
 
 const Check = () => <span className="text-emerald-600">✓</span>;
@@ -171,7 +181,7 @@ export function Landing() {
       </section>
 
       <section className="relative mx-auto max-w-6xl px-4">
-        <Shot src="/landing/dashboard.png" alt="Minilytics dashboard: visitors, revenue and conversion rate" />
+        <Shot src="/landing/dashboard.png" alt="Minilytics dashboard: visitors, revenue and conversion rate" size={[2160, 1500]} eager />
         <div className="absolute -left-1 top-[42%] hidden rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm shadow-xl md:block lg:-left-6">
           <div className="text-stone-500">Revenue from</div>
           <div className="font-semibold">𝕏 launch-tweet</div>
@@ -226,20 +236,20 @@ export function Landing() {
             title="Revenue next to every source"
             text="Blue is visitors, orange is money. See at a glance that X brings traffic and Indie Hackers brings customers, then click any source to filter the whole dashboard."
             points={['X, Google, ChatGPT, Reddit, YouTube… by name', 'Campaigns and keywords', 'Conversion rate and revenue per visitor']}
-            image={<Shot src="/landing/referrers.png" alt="Referrers with revenue" />}
+            image={<Shot src="/landing/referrers.png" alt="Referrers with revenue" size={[1029, 840]} />}
           />
           <Feature
             reverse
             title="Know exactly which post worked"
             text="Generate a tagged link for each tweet, article or newsletter. It shows up by name, with the visitors and revenue it brought."
             points={['Built-in link builder', 'Works with utm_campaign and ?ref=', 'Credit goes to the post, even if they buy 2 weeks later']}
-            image={<Shot src="/landing/campaigns.png" alt="Revenue by campaign" />}
+            image={<Shot src="/landing/campaigns.png" alt="Revenue by campaign" size={[1029, 441]} />}
           />
           <Feature
             title="Every customer’s full journey"
             text="Who paid, where they came from, and how long it took. Open anyone to see every page and click from first visit to payment."
             points={['First source and every visit', 'Button clicks and goals', 'Time from first visit to payment']}
-            image={<Shot src="/landing/journey.png" alt="Customer journeys" />}
+            image={<Shot src="/landing/journey.png" alt="Customer journeys" size={[1428, 785]} />}
           />
           <Feature
             reverse
@@ -248,7 +258,7 @@ export function Landing() {
             points={['3D globe or 2D map', 'Live feed of pages, goals and payments', 'Cha-ching sound on every payment']}
             image={
               <div className="flex justify-center rounded-2xl bg-[#0b1020] p-6 shadow-xl sm:p-10">
-                <img src="/landing/feed.png" alt="Live event feed" loading="lazy" className="w-full max-w-sm rounded-2xl" />
+                <img src="/landing/feed.png" alt="Live event feed" width={570} height={675} loading="lazy" className="w-full max-w-sm rounded-2xl" />
               </div>
             }
           />

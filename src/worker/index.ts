@@ -286,7 +286,18 @@ app.get('/api/sites/:id/funnels/:fid/stats', async (c) => {
 
 app.all('/api/*', (c) => c.json({ error: 'not found' }, 404));
 
-// Everything else is the dashboard (static files).
-app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
+// Static files are served before the Worker runs. What reaches here is a client-side route, or a page that doesn't exist.
+const PUBLIC_PAGES = /^\/(terms|privacy|refund)\/?$/;
+const APP_PAGES = /^\/(billing(\/.*)?|site\/[\w-]+(\/settings)?\/?)$/;
+
+app.all('*', async (c) => {
+  const path = new URL(c.req.url).pathname;
+  const index = await c.env.ASSETS.fetch(new URL('/', c.req.url));
+  const headers = new Headers(index.headers);
+  // Signed-in pages are private and unknown paths shouldn't rank: keep both out of search results.
+  if (!PUBLIC_PAGES.test(path)) headers.set('X-Robots-Tag', 'noindex');
+  const status = PUBLIC_PAGES.test(path) || APP_PAGES.test(path) ? 200 : 404;
+  return new Response(index.body, { status, headers });
+});
 
 export default app;
