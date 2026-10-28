@@ -102,6 +102,7 @@ export interface Me {
     paid: boolean;
     plan_status: string;
     plan_until: number | null;
+    plan: string | null;
   } | null;
 }
 
@@ -116,4 +117,6 @@ export interface PlanInfo {
   soldOut?: { price: string; spots: number }[];
   checkout: boolean;
   supportEmail: string | null;
+  /** Monthly subscription offered next to the main plan, when configured. */
+  monthly?: { price: string } | null;
 }

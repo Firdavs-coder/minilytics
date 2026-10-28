@@ -125,6 +125,7 @@ export function Landing() {
   const soldCount = soldOut.reduce((n, t) => n + t.spots, 0);
   const lastSold = soldOut[soldOut.length - 1];
   const cta = plan ? `Get started for ${priceLabel(plan)}` : 'Get started';
+  const monthly = plan?.monthly?.price;
 
   return (
     <div className="min-h-screen overflow-x-hidden">
@@ -167,7 +168,7 @@ export function Landing() {
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-stone-600 sm:text-xl">
           Minilytics follows every visitor from the first click to the payment, so you know exactly what to post more of. Unlimited
-          websites and events, {lifetime ? <>one payment of {price}. No subscription.</> : <>{priceText}.</>}
+          websites and events, {lifetime ? <>one payment of {price}{monthly ? <>, or {monthly}/month</> : '. No subscription'}.</> : <>{priceText}.</>}
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <GoogleButton label={cta} location="hero" />
@@ -284,7 +285,7 @@ export function Landing() {
             </thead>
             <tbody className="text-[15px]">
               {[
-                ['Price', priceText, '$9/month', '$9/month'],
+                ['Price', monthly ? <>{priceText}<div className="text-sm font-normal text-stone-500">or {monthly}/month</div></> : priceText, '$9/month', '$9/month'],
                 ...(lifetime ? [['First year', price, '$108', '$108'], ['Every year after', '$0', '$108', '$108']] : []),
                 ['Websites', 'Unlimited', '1', '1'],
                 ['Monthly events', 'Unlimited', '10k', '10k pageviews'],
@@ -324,12 +325,12 @@ export function Landing() {
       </section>
 
       {/* ---------- Pricing */}
-      <Section id="pricing" eyebrow="Pricing" title="One plan. Everything included.">
-        <div className="mx-auto max-w-md">
-          <div className="card relative p-8">
+      <Section id="pricing" eyebrow="Pricing" title={monthly ? 'Everything included. Pay once or monthly.' : 'One plan. Everything included.'}>
+        <div className={`mx-auto grid items-start gap-6 ${monthly ? 'max-w-4xl md:grid-cols-[1.15fr_1fr]' : 'max-w-md'}`}>
+          <div className={`card relative p-8 ${monthly ? 'ring-2 ring-revenue' : ''}`}>
             {spots && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-revenue px-3 py-1 text-xs font-semibold text-white">
-                {lifetime ? 'Lifetime deal' : 'Founding member price'}
+                {lifetime ? (monthly ? 'Lifetime deal · Best value' : 'Lifetime deal') : 'Founding member price'}
               </div>
             )}
             <div className="flex items-baseline gap-1">
@@ -369,9 +370,27 @@ export function Landing() {
               </div>
             )}
           </div>
-          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-stone-600">
-            <span className="text-lg">🛡️</span> 14-day money-back guarantee. No questions asked.
-          </div>
+          {monthly && (
+            <div className="card p-8">
+              <div className="text-sm font-semibold uppercase tracking-wider text-stone-500">Monthly</div>
+              <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-5xl font-semibold tracking-tight">{monthly}</span>
+                <span className="text-lg text-stone-500">/month</span>
+              </div>
+              <p className="mt-4 text-stone-600">Want to try it first? Get the same unlimited plan month to month and cancel anytime.</p>
+              <ul className="mt-6 space-y-2.5">
+                {['Everything in lifetime', 'Cancel anytime', 'Upgrade to lifetime whenever you like'].map((f) => (
+                  <li key={f} className="flex gap-2">
+                    <Check /> {f}
+                  </li>
+                ))}
+              </ul>
+              <GoogleButton label="Start monthly" light className="mt-8 w-full border border-stone-200" location="pricing-monthly" />
+            </div>
+          )}
+        </div>
+        <div className="mt-6 flex items-center justify-center gap-2 text-sm text-stone-600">
+          <span className="text-lg">🛡️</span> 14-day money-back guarantee. No questions asked.
         </div>
       </Section>
 
@@ -384,6 +403,9 @@ export function Landing() {
             ['Which payment providers work?', 'Stripe and Dodo Payments work out of the box (one webhook each). Any other provider can send payments with a simple API call.'],
             ['What about ad blockers?', 'You can serve the script from your own domain with a one-line rewrite, so blockers don’t see it. Payments are always recorded either way, because they come from the webhook.'],
             ['Do I need a cookie banner?', 'It uses two first-party cookies and no IP storage. Whether you need a consent banner depends on your visitors’ country; in the EU you may.'],
+            ...(monthly
+              ? [['Can I pay monthly instead?', `Yes, ${monthly}/month with everything unlimited, cancel anytime. Most people pick lifetime: at ${price} it pays for itself in about ${Math.ceil(Number(price.replace(/[^\d.]/g, '')) / Number(monthly.replace(/[^\d.]/g, '')))} months.`]]
+              : []),
             ...(lifetime
               ? [['Is lifetime really lifetime?', 'Yes. Pay once and keep unlimited access for as long as Minilytics runs. No renewals, no surprise bills.']]
               : []),
