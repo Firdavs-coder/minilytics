@@ -167,7 +167,8 @@ export function Settings({ siteId }: { siteId: string }) {
           </div>
         </details>
         <p className="mt-3 text-sm text-stone-500">
-          Skip your own visits: open <code>{site.domain}/?ml_ignore=true</code> once per browser.
+          Your own visits aren't counted from any browser you've opened this dashboard in. For other devices (like your phone), open{' '}
+          <code>{site.domain}/?ml_ignore=true</code> once.
         </p>
       </Section>
 

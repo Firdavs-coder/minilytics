@@ -6,6 +6,7 @@ import { clearSession, currentUser, googleCallback, googleStart, isHosted, requi
 import { billingWebhook, checkout, planInfo } from './billing';
 import { passwordsMatch, randomId } from './lib/crypto';
 import { handleDodoWebhook, handleGoalApi, handlePaymentApi, handleStripeWebhook, learnDodoProducts, rematchPayments } from './payments';
+import { rememberOwnerDevice } from './owner';
 import { breakdown, customers, funnel, makeCtx, overview, realtime, sparklines, visitorProfile, visitors, type FunnelStep } from './stats';
 
 const app = new Hono<AppEnv>();
@@ -61,6 +62,7 @@ app.post('/api/auth/logout', (c) => {
 
 app.get('/api/auth/me', async (c) => {
   const user = await currentUser(c);
+  if (user) c.executionCtx.waitUntil(rememberOwnerDevice(c, user).catch(() => {}));
   return c.json({ loggedIn: !!user, hosted: isHosted(c.env), user });
 });
 
