@@ -9,7 +9,7 @@ import { Settings } from './pages/Settings';
 import { Sites } from './pages/Sites';
 
 export function navigate(to: string) {
-  window.history.pushState(null, '', to);
+  window.history.pushState({ app: true }, '', to);
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
@@ -104,7 +104,7 @@ export function App() {
     if (q.get('signup') === '1') {
       window.minilytics?.('goal', 'signup_completed');
       q.delete('signup');
-      window.history.replaceState(null, '', window.location.pathname + (q.toString() ? `?${q}` : ''));
+      window.history.replaceState(window.history.state, '', window.location.pathname + (q.toString() ? `?${q}` : ''));
     }
     // Only when the signed-in account changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
