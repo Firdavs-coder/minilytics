@@ -6,7 +6,7 @@ import { clearSession, currentUser, googleCallback, googleStart, isHosted, requi
 import { billingWebhook, checkout, planInfo } from './billing';
 import { passwordsMatch, randomId } from './lib/crypto';
 import { handleDodoWebhook, handleGoalApi, handlePaymentApi, handleStripeWebhook, learnDodoProducts, rematchPayments } from './payments';
-import { breakdown, customers, funnel, makeCtx, overview, realtime, visitorProfile, visitors, type FunnelStep } from './stats';
+import { breakdown, customers, funnel, makeCtx, overview, realtime, sparklines, visitorProfile, visitors, type FunnelStep } from './stats';
 
 const app = new Hono<AppEnv>();
 const MAX_FAILURES = 10;
@@ -127,6 +127,14 @@ app.get('/api/sites', async (c) => {
       online: by.get(s.id)?.online ?? 0,
     })),
   );
+});
+
+// Every site's totals and sparkline for the all-websites view.
+app.use('/api/sites-overview', requireUser);
+app.get('/api/sites-overview', async (c) => {
+  const access = siteAccessSql(c.env, c.get('user'));
+  const rows = await c.env.DB.prepare(`SELECT s.id FROM sites s WHERE ${access.sql}`).bind(...access.params).all<{ id: string }>();
+  return c.json(await sparklines(c.env.DB, rows.results.map((r) => r.id), c.req.query('period') ?? '30d'));
 });
 
 app.post('/api/sites', async (c) => {

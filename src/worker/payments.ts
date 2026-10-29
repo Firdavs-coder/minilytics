@@ -1,14 +1,9 @@
 import type { Context } from 'hono';
 import { getSite, type AppEnv, type Site } from './env';
 import { verifyStandardWebhook, verifyStripeWebhook } from './lib/crypto';
+import { currencyDecimals } from '../shared/currency';
 
-export function currencyDecimals(currency: string): number {
-  try {
-    return new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2;
-  } catch {
-    return 2;
-  }
-}
+export { currencyDecimals };
 
 interface PaymentInput {
   id: string;

@@ -37,6 +37,14 @@ export interface Site {
   online?: number;
 }
 
+export interface SiteSpark {
+  id: string;
+  visitors: number;
+  revenue: number;
+  online: number;
+  series: { visitors: number; revenue: number }[];
+}
+
 export interface Kpis {
   visitors: number;
   sessions: number;
